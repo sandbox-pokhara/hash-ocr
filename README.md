@@ -16,7 +16,6 @@ pip install hash-ocr
 import cv2
 
 from hash_ocr import compute_distances
-from hash_ocr import get_characters
 from hash_ocr import get_word
 
 img = cv2.imread("test_data/382.png", cv2.IMREAD_GRAYSCALE)

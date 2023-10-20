@@ -1,6 +1,7 @@
 import json
 import os
 from functools import lru_cache
+from typing import Literal
 from typing import Optional
 from typing import cast
 
@@ -11,7 +12,12 @@ from cv2.typing import MatLike
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 DEFAULT_MODEL = os.path.join(BASE_DIR, "model", "digits.png")
-hash_obj = cv2.img_hash.BlockMeanHash.create()
+
+# BlockMeanHash is 10x slower than AverageHash
+img_hash = {
+    "average": cv2.img_hash.AverageHash.create(),
+    "block_mean": cv2.img_hash.BlockMeanHash.create(),
+}
 
 Hash = npt.NDArray[np.uint8]
 
@@ -46,14 +52,18 @@ def get_model(file_path: str = DEFAULT_MODEL):
     return output
 
 
-def compute_hash(img: MatLike) -> npt.NDArray[np.uint8]:
-    hsh = hash_obj.compute(img)
+def compute_hash(
+    img: MatLike, method: Literal["average", "block_mean"] = "block_mean"
+) -> npt.NDArray[np.uint8]:
+    hsh = img_hash[method].compute(img)
     hsh = cast(npt.NDArray[np.uint8], hsh)
     return hsh
 
 
 def compute_distances(
-    threshed_img: MatLike, model_path: str = DEFAULT_MODEL
+    threshed_img: MatLike,
+    model_path: str = DEFAULT_MODEL,
+    method: Literal["average", "block_mean"] = "block_mean",
 ) -> list[list[tuple[str, float]]]:
     model = get_model(file_path=model_path)
     cnts, _ = cv2.findContours(
@@ -66,17 +76,24 @@ def compute_distances(
         x, y, w, h = cv2.boundingRect(cnt)
         letter_img: MatLike = threshed_img[y : y + h, x : x + w]
         hsh = compute_hash(letter_img)
-        data = [(char, hash_obj.compare(hsh, hsh1)) for char, hsh1 in model]
+        data = [
+            (char, img_hash[method].compare(hsh, hsh1)) for char, hsh1 in model
+        ]
         data.sort(key=lambda d: d[1])
         output.append(data)
     return output
 
 
 def get_characters(
-    threshed_img: MatLike, model_path: str = DEFAULT_MODEL, max_dist: int = 80
+    threshed_img: MatLike,
+    model_path: str = DEFAULT_MODEL,
+    max_dist: int = 80,
+    method: Literal["average", "block_mean"] = "block_mean",
 ) -> list[tuple[str, float]]:
     output: list[tuple[str, float]] = []
-    distances = compute_distances(threshed_img, model_path=model_path)
+    distances = compute_distances(
+        threshed_img, model_path=model_path, method=method
+    )
     for data in distances:
         data = [d for d in data if d[1] <= max_dist]
         if data == []:
@@ -87,13 +104,16 @@ def get_characters(
 
 
 def get_word(
-    threshed_img: MatLike, model_path: str = DEFAULT_MODEL, max_dist: int = 80
+    threshed_img: MatLike,
+    model_path: str = DEFAULT_MODEL,
+    max_dist: int = 80,
+    method: Literal["average", "block_mean"] = "block_mean",
 ) -> str:
     """
     This function assumes that the image contains only one word
     """
     chars = get_characters(
-        threshed_img, model_path=model_path, max_dist=max_dist
+        threshed_img, model_path=model_path, max_dist=max_dist, method=method
     )
     text = "".join(char for char, _ in chars)
     return text

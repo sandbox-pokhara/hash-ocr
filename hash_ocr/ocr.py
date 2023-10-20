@@ -29,7 +29,10 @@ def threshold_image(img: MatLike) -> MatLike:
 
 
 @lru_cache
-def get_model(file_path: str = DEFAULT_MODEL):
+def get_model(
+    file_path: str = DEFAULT_MODEL,
+    method: Literal["average", "block_mean"] = "block_mean",
+):
     label_file_path = file_path.replace(".png", ".txt")
     with open(label_file_path) as fp:
         labels: list[Optional[str]] = json.load(fp)
@@ -47,7 +50,7 @@ def get_model(file_path: str = DEFAULT_MODEL):
             continue
         x, y, w, h = cv2.boundingRect(cnt)
         char_img: MatLike = img[y : y + h, x : x + w]
-        hsh = compute_hash(char_img)
+        hsh = compute_hash(char_img, method=method)
         output.append((char, hsh))
     return output
 
@@ -65,7 +68,7 @@ def compute_distances(
     model_path: str = DEFAULT_MODEL,
     method: Literal["average", "block_mean"] = "block_mean",
 ) -> list[list[tuple[str, float]]]:
-    model = get_model(file_path=model_path)
+    model = get_model(file_path=model_path, method=method)
     cnts, _ = cv2.findContours(
         threshed_img, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE
     )
@@ -75,7 +78,7 @@ def compute_distances(
     for cnt in cnts:
         x, y, w, h = cv2.boundingRect(cnt)
         letter_img: MatLike = threshed_img[y : y + h, x : x + w]
-        hsh = compute_hash(letter_img)
+        hsh = compute_hash(letter_img, method=method)
         data = [
             (char, img_hash[method].compare(hsh, hsh1)) for char, hsh1 in model
         ]

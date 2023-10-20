@@ -2,3 +2,4 @@ include LICENSE
 include README.md
 include hash_ocr/model/*.png
 include hash_ocr/model/*.txt
+include hash_ocr/py.typed

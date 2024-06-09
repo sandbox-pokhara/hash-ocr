@@ -5,7 +5,7 @@ from typing import Optional
 import cv2
 from cv2.typing import MatLike
 
-from hash_ocr.ocr import threshold_image
+from hash_ocr import threshold_image
 
 
 def draw_labels(
@@ -22,7 +22,7 @@ def draw_labels(
 
 
 def label(file_path: str):
-    label_file_path = file_path.replace(".png", ".txt")
+    label_file_path = file_path.replace(".png", ".json")
 
     img = cv2.imread(file_path)
     img = threshold_image(img)

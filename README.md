@@ -15,16 +15,18 @@ pip install hash-ocr
 ```python
 import cv2
 
-from hash_ocr import compute_distances
-from hash_ocr import get_word
+from hash_ocr import AverageHashModel
 
 img = cv2.imread("test_data/382.png", cv2.IMREAD_GRAYSCALE)
 img = cv2.threshold(img, 128, 255, cv2.THRESH_BINARY)[1]
 
-print(get_word(img))
+# default model can only read digits
+model = AverageHashModel()
+
+print(model.get_word(img))
 # 382
 
-print(compute_distances(img))
+print(model.compute_distances(img))
 # [(8.0, '3', (5, 6, 18, 25)), (7.0, '8', (24, 5, 18, 26)), (10.0, '2', (42, 6, 20, 24))]
 ```
 
@@ -45,9 +47,9 @@ Example label:
 Example:
 
 ```python
-from hash_ocr.models import AverageHash
+from hash_ocr.models import AverageHashModel
 
-model = AverageHash(
+model = AverageHashModel(
     model_path="hash_ocr/models/digits.png",
     label_path="hash_ocr/models/letters.json",
 )

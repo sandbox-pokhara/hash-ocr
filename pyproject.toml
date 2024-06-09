@@ -11,4 +11,5 @@ line-length = 79
 preview = true
 
 [tool.pyright]
+include = ["hash_ocr", "test.py"]
 typeCheckingMode = "strict"

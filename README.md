@@ -6,7 +6,7 @@ An ocr designed to read in game texts
 
 You can install the package via pip:
 
-```bash
+```
 pip install hash-ocr
 ```
 
@@ -31,14 +31,30 @@ for d in compute_distances(img):
 # [('2', 20.0), ('3', 70.0), ('1', 76.0), ('7', 85.0), ...]
 ```
 
+## Custom Models
+
+A model in `hash-ocr` contains an image and a json file.
+
+Example image:
+
+![Model Image](hash_ocr/models/digits.png)
+
+Example label:
+
+```json
+["0", "1", "2", "3", "4", "5", "6", "7", "8", "9"]
+```
+
+Example:
+
+```python
+get_word(
+    img,
+    model_path="path/to/image",
+    label_path="path/to/label",
+)
+```
+
 ## License
 
 This project is licensed under the terms of the MIT license.
-
-## Contributing
-
-Pull requests are welcome. For major changes, please open an issue first to discuss what you would like to change.
-
-## Contact
-
-If you want to contact me you can reach me at pradishbijukchhe@gmail.com.

@@ -12,7 +12,8 @@ from cv2.typing import MatLike
 Method = Literal["average", "block_mean", "md5"]
 
 BASE_DIR = Path(__file__).parent
-DEFAULT_MODEL = str(BASE_DIR / "model" / "digits.png")
+DEFAULT_MODEL = BASE_DIR / "models" / "digits.png"
+DEFAULT_LABELS = BASE_DIR / "models" / "digits.json"
 
 
 avg_hash = cv2.img_hash.AverageHash.create()
@@ -32,11 +33,13 @@ def compute_hash(img: MatLike, method: Method):
 
 def compare_hash(hsh1: bytes, hsh2: bytes, method: Method):
     if method == "average":
-        return avg_hash.compare(np.frombuffer(hsh1), np.frombuffer(hsh2))
+        h1 = np.frombuffer(hsh1, np.uint8)
+        h2 = np.frombuffer(hsh2, np.uint8)
+        return avg_hash.compare(h1, h2)
     if method == "block_mean":
-        return block_mean_hash.compare(
-            np.frombuffer(hsh1), np.frombuffer(hsh2)
-        )
+        h1 = np.frombuffer(hsh1, np.uint8)
+        h2 = np.frombuffer(hsh2, np.uint8)
+        return block_mean_hash.compare(h1, h2)
     if method == "md5":
         return 0.0 if hsh1 == hsh2 else float("inf")
     raise NotImplementedError(f"Hash method {method} not implemented.")
@@ -50,14 +53,14 @@ def threshold_image(img: MatLike) -> MatLike:
 
 @lru_cache
 def get_model(
-    file_path: str = DEFAULT_MODEL,
+    model_path: str | Path = DEFAULT_MODEL,
+    label_path: str | Path = DEFAULT_LABELS,
     method: Method = "block_mean",
 ):
-    label_file_path = file_path.replace(".png", ".txt")
-    with open(label_file_path) as fp:
+    with open(label_path) as fp:
         labels: list[Optional[str]] = json.load(fp)
 
-    img = cv2.imread(file_path)
+    img = cv2.imread(str(model_path))
     img = threshold_image(img)
     cnts, _ = cv2.findContours(img, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
     cnts = list(cnts)
@@ -77,10 +80,11 @@ def get_model(
 
 def compute_distances(
     threshed_img: MatLike,
-    model_path: str = DEFAULT_MODEL,
+    model_path: str | Path = DEFAULT_MODEL,
+    label_path: str | Path = DEFAULT_LABELS,
     method: Method = "block_mean",
 ) -> list[list[tuple[str, float]]]:
-    model = get_model(file_path=model_path, method=method)
+    model = get_model(model_path, label_path, method)
     cnts, _ = cv2.findContours(
         threshed_img, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE
     )
@@ -101,14 +105,13 @@ def compute_distances(
 
 def get_characters(
     threshed_img: MatLike,
-    model_path: str = DEFAULT_MODEL,
+    model_path: str | Path = DEFAULT_MODEL,
+    label_path: str | Path = DEFAULT_LABELS,
     max_dist: int = 80,
     method: Method = "block_mean",
 ) -> list[tuple[str, float]]:
     output: list[tuple[str, float]] = []
-    distances = compute_distances(
-        threshed_img, model_path=model_path, method=method
-    )
+    distances = compute_distances(threshed_img, model_path, label_path, method)
     for data in distances:
         data = [d for d in data if d[1] <= max_dist]
         if data == []:
@@ -120,7 +123,8 @@ def get_characters(
 
 def get_word(
     threshed_img: MatLike,
-    model_path: str = DEFAULT_MODEL,
+    model_path: str | Path = DEFAULT_MODEL,
+    label_path: str | Path = DEFAULT_LABELS,
     max_dist: int = 80,
     method: Method = "block_mean",
 ) -> str:
@@ -128,7 +132,7 @@ def get_word(
     This function assumes that the image contains only one word
     """
     chars = get_characters(
-        threshed_img, model_path=model_path, max_dist=max_dist, method=method
+        threshed_img, model_path, label_path, max_dist, method
     )
     text = "".join(char for char, _ in chars)
     return text

@@ -5,7 +5,7 @@ with open("README.md", "r", encoding="utf-8") as fh:
 
 setuptools.setup(
     name="hash-ocr",
-    version="1.0.3",
+    version="2.0.0",
     author="Pradish Bijukchhe",
     author_email="pradishbijukchhe@gmail.com",
     description="An ocr designed to read in game texts",

@@ -24,11 +24,8 @@ img = cv2.threshold(img, 128, 255, cv2.THRESH_BINARY)[1]
 print(get_word(img))
 # 382
 
-for d in compute_distances(img):
-    print(d)
-# [('3', 24.0), ('8', 66.0), ('2', 74.0), ('7', 77.0), ...]
-# [('8', 24.0), ('6', 60.0), ('0', 62.0), ('3', 68.0), ...]
-# [('2', 20.0), ('3', 70.0), ('1', 76.0), ('7', 85.0), ...]
+print(compute_distances(img))
+# [(8.0, '3', (5, 6, 18, 25)), (7.0, '8', (24, 5, 18, 26)), (10.0, '2', (42, 6, 20, 24))]
 ```
 
 ## Custom Models
@@ -48,10 +45,11 @@ Example label:
 Example:
 
 ```python
-get_word(
-    img,
-    model_path="path/to/image",
-    label_path="path/to/label",
+from hash_ocr.models import AverageHash
+
+model = AverageHash(
+    model_path="hash_ocr/models/digits.png",
+    label_path="hash_ocr/models/letters.json",
 )
 ```
 

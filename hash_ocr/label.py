@@ -3,9 +3,8 @@ import json
 from typing import Optional
 
 import cv2
+import numpy as np
 from cv2.typing import MatLike
-
-from hash_ocr import threshold_image
 
 
 def draw_labels(
@@ -25,7 +24,8 @@ def label(file_path: str):
     label_file_path = file_path.replace(".png", ".json")
 
     img = cv2.imread(file_path)
-    img = threshold_image(img)
+    white = np.array([255, 255, 255])
+    img = cv2.inRange(img, white, white)
     img_color = cv2.cvtColor(img, cv2.COLOR_GRAY2BGR)
     cnts, _ = cv2.findContours(img, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
     cnts = list(cnts)

@@ -132,3 +132,4 @@ dist
 
 # Custom
 temp/
+test.py

@@ -1,6 +1,28 @@
 [build-system]
-requires = ['setuptools>=40.8.0', 'wheel']
-build-backend = 'setuptools.build_meta:__legacy__'
+requires = ["setuptools>=70.0.0"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "hash-ocr"
+version = "2.1.0"
+dependencies = ["opencv-python", "opencv-contrib-python"]
+requires-python = ">=3"
+authors = [{ name = "Pradish Bijukchhe", email = "pradish@sandbox.com.np" }]
+description = "An ocr designed to read in game texts"
+readme = "README.md"
+license = { file = "LICENSE" }
+keywords = []
+classifiers = ["Programming Language :: Python :: 3"]
+
+[project.urls]
+Homepage = "https://github.com/sandbox-pokhara/hash-ocr"
+Issues = "https://github.com/sandbox-pokhara/hash-ocr/issues"
+
+[tool.setuptools]
+include-package-data = true
+
+[tool.setuptools.package-dir]
+"hash_ocr" = "hash_ocr"
 
 [tool.isort]
 line_length = 79

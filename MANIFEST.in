@@ -1,5 +1,5 @@
 include LICENSE
 include README.md
 include hash_ocr/models/*.png
-include hash_ocr/models/*.txt
+include hash_ocr/models/*.json
 include hash_ocr/py.typed

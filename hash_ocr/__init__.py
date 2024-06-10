@@ -113,11 +113,41 @@ class Model:
         box = self.unify_boxes([b for _, b in chars])
         return text, box
 
+    def get_text_boxes(self, threshed_img: MatLike, score_threshold: int = 80):
+        chars = self.get_char_boxes(threshed_img, score_threshold)
+        chars.sort(key=lambda c: c[1][1])
+        lines: List[List[Tuple[str, Tuple[int, int, int, int]]]] = []
+        current_line: List[Tuple[str, Tuple[int, int, int, int]]] = []
+        current_base_line = 0
+        while chars:
+            char = chars.pop(0)
+            _, y, _, h = char[1]
+            if not current_line:
+                current_line.append(char)
+                current_base_line = y + h
+            elif y < current_base_line:
+                current_line.append(char)
+            else:
+                current_line.sort(key=lambda c: c[1][0])
+                lines.append(current_line)
+                current_line = [char]
+                current_base_line = y + h
+        if current_line:
+            current_line.sort(key=lambda c: c[1][0])
+            lines.append(current_line)
+        return lines
+
     def get_word(
         self, threshed_img: MatLike, score_threshold: int = 80
     ) -> str:
         chars = self.get_char_boxes(threshed_img, score_threshold)
         text = "".join(char for char, _ in chars)
+        return text
+
+    def get_text(self, threshed_img: MatLike, score_threshold: int = 80):
+        lines = self.get_text_boxes(threshed_img, score_threshold)
+        lines = ["".join(c for c, _ in l) for l in lines]
+        text = "\n".join(lines)
         return text
 
 

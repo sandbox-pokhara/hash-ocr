@@ -14,8 +14,8 @@ def draw_labels(
         try:
             if label is None:
                 continue
-            x, y, _, h = cv2.boundingRect(cnts[i])
-            cv2.putText(img, label, (x, y + h), 0, 1, (0, 0, 255), 2)
+            x, y, _, _ = cv2.boundingRect(cnts[i])
+            cv2.putText(img, label, (x, y), 1, 1, (0, 0, 255))
         except IndexError:
             pass
 
@@ -45,7 +45,7 @@ def label(file_path: str):
 
         display = img_color.copy()
 
-        cv2.rectangle(display, (x, y), (x + w, y + h), (0, 255, 0), 2)
+        cv2.rectangle(display, (x, y), (x + w, y + h), (0, 255, 0))
         draw_labels(display, labels, cnts)
         cv2.imshow("", display)
         key = cv2.waitKeyEx()

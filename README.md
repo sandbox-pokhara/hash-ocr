@@ -1,6 +1,6 @@
 # hash-ocr
 
-An ocr designed to read in game texts
+Fast OCR to read computer rendered texts.
 
 ## Installation
 

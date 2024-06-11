@@ -15,7 +15,7 @@ def draw_labels(
             if label is None:
                 continue
             x, y, _, _ = cv2.boundingRect(cnts[i])
-            cv2.putText(img, label, (x, y), 1, 1, (0, 0, 255))
+            cv2.putText(img, label, (x, y), 1, 1, (0, 255, 0))
         except IndexError:
             pass
 

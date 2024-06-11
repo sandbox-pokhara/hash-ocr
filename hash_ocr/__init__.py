@@ -37,30 +37,6 @@ class Model:
         img = cv2.inRange(img, white, white)
         return img
 
-    def unify_boxes(self, boxes: List[Tuple[int, int, int, int]]):
-        """
-        Returns a bounding box that encloses a list of bounding boxes
-        """
-        # Initialize variables to extreme values
-        min_x = float("inf")
-        min_y = float("inf")
-        max_x = float("-inf")
-        max_y = float("-inf")
-
-        for x, y, w, h in boxes:
-            min_x = min(min_x, x)
-            min_y = min(min_y, y)
-            max_x = max(max_x, x + w)
-            max_y = max(max_y, y + h)
-
-        # Calculate the unified bounding box coordinates
-        unified_x = int(min_x)
-        unified_y = int(min_y)
-        unified_w = int(max_x - min_x)
-        unified_h = int(max_y - min_y)
-
-        return (unified_x, unified_y, unified_w, unified_h)
-
     def get_model_chars(self):
         with open(self.label_path) as fp:
             labels: list[Optional[str]] = json.load(fp)
@@ -97,6 +73,7 @@ class Model:
             output.append((score, char, (x, y, w, h)))
         return output
 
+    # text boxes
     def get_char_boxes(
         self, threshed_img: MatLike
     ) -> List[Tuple[str, Tuple[int, int, int, int]]]:
@@ -108,17 +85,7 @@ class Model:
             output.append((letter, rect))
         return output
 
-    def get_word_box(
-        self, threshed_img: MatLike
-    ) -> Tuple[str, Tuple[int, int, int, int]]:
-        chars = self.get_char_boxes(threshed_img)
-        if not chars:
-            return "", (-1, -1, -1, -1)
-        text = "".join(char for char, _ in chars)
-        box = self.unify_boxes([b for _, b in chars])
-        return text, box
-
-    def get_line_boxes(
+    def get_word_boxes(
         self, threshed_img: MatLike
     ) -> List[Tuple[str, Tuple[int, int, int, int]]]:
         word_seperator = cv2.dilate(
@@ -137,7 +104,7 @@ class Model:
         words.sort(key=lambda w: w[1][0])
         return words
 
-    def get_text_boxes(
+    def get_line_boxes(
         self, threshed_img: MatLike
     ) -> List[Tuple[str, Tuple[int, int, int, int]]]:
         line_seperator = cv2.dilate(
@@ -150,19 +117,25 @@ class Model:
         for c in reversed(cnts):
             x, y, w, h = cv2.boundingRect(c)
             line_img = threshed_img[y : y + h, x : x + w]
-            words = self.get_line_boxes(line_img)
+            words = self.get_word_boxes(line_img)
             word = " ".join([c for c, _ in words])
             if word:
                 lines.append((word, (x, y, w, h)))
         return lines
 
+    # texts
     def get_word(self, threshed_img: MatLike) -> str:
         chars = self.get_char_boxes(threshed_img)
         text = "".join(char for char, _ in chars)
         return text
 
+    def get_line(self, threshed_img: MatLike) -> str:
+        chars = self.get_word_boxes(threshed_img)
+        text = " ".join(char for char, _ in chars)
+        return text
+
     def get_text(self, threshed_img: MatLike):
-        lines = self.get_text_boxes(threshed_img)
+        lines = self.get_line_boxes(threshed_img)
         text = "\n".join([c for c, _ in lines])
         return text
 

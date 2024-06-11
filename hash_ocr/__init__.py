@@ -1,7 +1,6 @@
 import hashlib
 import json
 from pathlib import Path
-from typing import Dict
 from typing import List
 from typing import Optional
 from typing import Tuple
@@ -214,44 +213,21 @@ class MD5HashModel(Model):
         label_path: str | Path = DEFAULT_LABEL_PATH,
         connected_chars: bool = False,
     ):
+        """
+        :param connected_chars: set this to True if the characters of
+        the font can touch each other, but this will slightly affect
+        the performance
+        """
         super().__init__(model_path, label_path)
         self.chars = self.get_model_chars()
         self.hash_map = self.create_hash_map()
-        if connected_chars:
-            self.partial_hash_map = self.create_partial_hash_map()
-        else:
-            self.partial_hash_map = {}
+        # max/min width of characters of the model
+        self.min_w = min([s[1].shape[1] for s in self.chars])
+        self.max_w = max([s[1].shape[1] for s in self.chars])
+        self.connected_chars = connected_chars
 
     def create_hash_map(self):
         return {self.compute_hash(i): c for c, i in self.chars}
-
-    def create_partial_hash_map(self):
-        """
-        Hash map of partial letters
-        Crops each letter into smallar chunks and store the hash
-        """
-        w = [i.shape[1] for _, i in self.chars]
-        min_w = min(w)
-        max_w = max(w)
-        output: Dict[int, Dict[bytes, Tuple[str, int]]] = {}
-        for i in range(min_w, max_w + 1):
-            mapping: Dict[bytes, Tuple[str, int]] = {}
-            duplicate_hsh: set[bytes] = set()
-            for char, img in self.chars:
-                cropped = img[:, :i]
-                cnts, _ = cv2.findContours(
-                    cropped, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE
-                )
-                x, y, w, h = cv2.boundingRect(cnts[0])
-                cropped = cropped[y : y + h, x : x + w]
-                hsh = self.compute_hash(cropped)
-                if hsh in mapping:
-                    duplicate_hsh.add(hsh)
-                mapping[hsh] = char, img.shape[1]
-            for hsh in duplicate_hsh:
-                del mapping[hsh]
-            output[i] = mapping
-        return output
 
     def compute_hash(self, img: MatLike):
         return hashlib.md5(img.tobytes()).digest()
@@ -261,31 +237,35 @@ class MD5HashModel(Model):
         Classify the connected letters by splitting them into
         small chunks and check the hash in partial_hash_map
         """
-        for w, hsh_map in self.partial_hash_map.items():
-            if w > img.shape[1]:
-                return float("inf"), ""
+        if img.shape[0] * img.shape[1] == 0:
+            return float("inf"), ""
+
+        for w in reversed(range(self.min_w, self.max_w)):
             partial_img = img[:, :w]
             cnts, _ = cv2.findContours(
                 partial_img, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE
             )
             for c in cnts:
                 x, y, w, h = cv2.boundingRect(c)
-                char_img: MatLike = partial_img[y : y + h, x : x + w]
+                # char_img: MatLike = partial_img[y : y + h, x : x + w]
+                mask = np.zeros_like(partial_img, np.uint8)
+                cv2.drawContours(mask, [c], -1, [255], -1)
+                char_img = cv2.bitwise_and(partial_img, mask)
+                char_img = char_img[y : y + h, x : x + w]
+
                 hsh = self.compute_hash(char_img)
-                if hsh in hsh_map:
-                    char, char_w = hsh_map[hsh]
+                if hsh in self.hash_map:
                     return (
                         0.0,
-                        char
-                        + self.classify_connected_letters(img[:, char_w:])[1],
+                        self.hash_map[hsh]
+                        + self.classify_connected_letters(img[:, w:])[1],
                     )
-
         return float("inf"), ""
 
     def classify_letter(self, img: MatLike) -> Tuple[float, str]:
         hsh = self.compute_hash(img)
         char = self.hash_map.get(hsh, "")
-        if not char and self.partial_hash_map:
+        if not char and self.connected_chars:
             # if the char is not in hash map
             # it can be a contour of connected characters
             return self.classify_connected_letters(img)

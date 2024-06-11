@@ -19,9 +19,15 @@ class Model:
         self,
         model_path: str | Path,
         label_path: str | Path = DEFAULT_LABEL_PATH,
+        score_threshold: float = 80.0,
+        max_letter_gap: int = 4,
+        max_word_gap: int = 10,
     ):
         self.model_path = model_path
         self.label_path = label_path
+        self.score_threshold = score_threshold
+        self.max_letter_gap = max_letter_gap
+        self.max_word_gap = max_word_gap
 
     def classify_letter(self, img: MatLike) -> Tuple[float, str]:
         raise NotImplementedError
@@ -92,61 +98,73 @@ class Model:
         return output
 
     def get_char_boxes(
-        self, threshed_img: MatLike, score_threshold: int = 80
+        self, threshed_img: MatLike
     ) -> List[Tuple[str, Tuple[int, int, int, int]]]:
         output: List[Tuple[str, Tuple[int, int, int, int]]] = []
         scores = self.compute_scores(threshed_img)
         for score, letter, rect in scores:
-            if score > score_threshold:
+            if score > self.score_threshold:
                 continue
             output.append((letter, rect))
         return output
 
     def get_word_box(
-        self, threshed_img: MatLike, score_threshold: int = 80
+        self, threshed_img: MatLike
     ) -> Tuple[str, Tuple[int, int, int, int]]:
-        chars = self.get_char_boxes(threshed_img, score_threshold)
+        chars = self.get_char_boxes(threshed_img)
         if not chars:
             return "", (-1, -1, -1, -1)
         text = "".join(char for char, _ in chars)
         box = self.unify_boxes([b for _, b in chars])
         return text, box
 
-    def get_text_boxes(self, threshed_img: MatLike, score_threshold: int = 80):
-        chars = self.get_char_boxes(threshed_img, score_threshold)
-        chars.sort(key=lambda c: c[1][1])
-        lines: List[List[Tuple[str, Tuple[int, int, int, int]]]] = []
-        current_line: List[Tuple[str, Tuple[int, int, int, int]]] = []
-        current_base_line = 0
-        while chars:
-            char = chars.pop(0)
-            _, y, _, h = char[1]
-            if not current_line:
-                current_line.append(char)
-                current_base_line = y + h
-            elif y < current_base_line:
-                current_line.append(char)
-            else:
-                current_line.sort(key=lambda c: c[1][0])
-                lines.append(current_line)
-                current_line = [char]
-                current_base_line = y + h
-        if current_line:
-            current_line.sort(key=lambda c: c[1][0])
-            lines.append(current_line)
+    def get_line_boxes(
+        self, threshed_img: MatLike
+    ) -> List[Tuple[str, Tuple[int, int, int, int]]]:
+        word_seperator = cv2.dilate(
+            threshed_img, np.ones((1, self.max_letter_gap))
+        )
+        cnts, _ = cv2.findContours(
+            word_seperator, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE
+        )
+        words: List[Tuple[str, Tuple[int, int, int, int]]] = []
+        for c in cnts:
+            x, y, w, h = cv2.boundingRect(c)
+            word_img = threshed_img[y : y + h, x : x + w]
+            # cv2.imshow("", word_img)
+            # cv2.waitKey()
+            word = self.get_word(word_img)
+            if word:
+                words.append((word, (x, y, w, h)))
+        words.sort(key=lambda w: w[1][0])
+        return words
+
+    def get_text_boxes(
+        self, threshed_img: MatLike
+    ) -> List[Tuple[str, Tuple[int, int, int, int]]]:
+        line_seperator = cv2.dilate(
+            threshed_img, np.ones((1, self.max_word_gap))
+        )
+        cnts, _ = cv2.findContours(
+            line_seperator, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE
+        )
+        lines: List[Tuple[str, Tuple[int, int, int, int]]] = []
+        for c in reversed(cnts):
+            x, y, w, h = cv2.boundingRect(c)
+            line_img = threshed_img[y : y + h, x : x + w]
+            words = self.get_line_boxes(line_img)
+            word = " ".join([c for c, _ in words])
+            lines.append((word, (x, y, w, h)))
         return lines
 
-    def get_word(
-        self, threshed_img: MatLike, score_threshold: int = 80
-    ) -> str:
-        chars = self.get_char_boxes(threshed_img, score_threshold)
+    def get_word(self, threshed_img: MatLike) -> str:
+        chars = self.get_char_boxes(threshed_img)
         text = "".join(char for char, _ in chars)
         return text
 
-    def get_text(self, threshed_img: MatLike, score_threshold: int = 80):
-        lines = self.get_text_boxes(threshed_img, score_threshold)
-        lines = ["".join(c for c, _ in l) for l in lines]
-        text = "\n".join(lines)
+    def get_text(self, threshed_img: MatLike):
+        lines = self.get_text_boxes(threshed_img)
+        text = "\n".join([c for c, _ in lines])
         return text
 
 
@@ -247,7 +265,6 @@ class MD5HashModel(Model):
             )
             for c in cnts:
                 x, y, w, h = cv2.boundingRect(c)
-                # char_img: MatLike = partial_img[y : y + h, x : x + w]
                 mask = np.zeros_like(partial_img, np.uint8)
                 cv2.drawContours(mask, [c], -1, [255], -1)
                 char_img = cv2.bitwise_and(partial_img, mask)

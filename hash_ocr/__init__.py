@@ -205,8 +205,8 @@ class MD5HashModel(Model):
     ):
         """
         :param connected_chars: set this to True if the characters of
-        the font can touch each other, but this will slightly affect
-        the performance
+        the font can touch each other, but this will affect the performance
+        of the OCR
         """
         super().__init__(model_path, label_path)
         self.chars = self.get_model_chars()
@@ -224,13 +224,16 @@ class MD5HashModel(Model):
 
     def classify_connected_letters(self, img: MatLike) -> Tuple[float, str]:
         """
-        Classify the connected letters by splitting them into
-        small chunks and check the hash in partial_hash_map
+        Classify the connected letters by splitting them into small chunks
+        This method is slow
         """
         if img.shape[0] * img.shape[1] == 0:
             return float("inf"), ""
 
-        for w in reversed(range(self.min_w, self.max_w)):
+        min_w = self.min_w
+        # improves performance a lot
+        max_w = min(img.shape[1], self.max_w)
+        for w in reversed(range(min_w, max_w + 1)):
             partial_img = img[:, :w]
             cnts, _ = cv2.findContours(
                 partial_img, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE
@@ -252,6 +255,8 @@ class MD5HashModel(Model):
         return float("inf"), ""
 
     def classify_letter(self, img: MatLike) -> Tuple[float, str]:
+        if img.shape[1] < self.min_w:
+            return float("inf"), ""
         hsh = self.compute_hash(img)
         char = self.hash_map.get(hsh, "")
         if not char and self.connected_chars:

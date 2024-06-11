@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "hash-ocr"
-version = "2.2.2"
+version = "2.2.3"
 dependencies = ["opencv-python", "opencv-contrib-python"]
 requires-python = ">=3"
 authors = [{ name = "Pradish Bijukchhe", email = "pradish@sandbox.com.np" }]

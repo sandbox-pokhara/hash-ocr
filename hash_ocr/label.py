@@ -47,7 +47,7 @@ def label(file_path: str):
 
         cv2.rectangle(display, (x, y), (x + w, y + h), (0, 255, 0))
         draw_labels(display, labels, cnts)
-        cv2.imshow("", display)
+        cv2.imshow("Hash OCR Label Tool", display)
         key = cv2.waitKeyEx()
 
         # enter

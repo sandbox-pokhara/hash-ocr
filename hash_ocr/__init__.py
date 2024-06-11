@@ -131,8 +131,6 @@ class Model:
         for c in cnts:
             x, y, w, h = cv2.boundingRect(c)
             word_img = threshed_img[y : y + h, x : x + w]
-            # cv2.imshow("", word_img)
-            # cv2.waitKey()
             word = self.get_word(word_img)
             if word:
                 words.append((word, (x, y, w, h)))
@@ -154,7 +152,8 @@ class Model:
             line_img = threshed_img[y : y + h, x : x + w]
             words = self.get_line_boxes(line_img)
             word = " ".join([c for c, _ in words])
-            lines.append((word, (x, y, w, h)))
+            if word:
+                lines.append((word, (x, y, w, h)))
         return lines
 
     def get_word(self, threshed_img: MatLike) -> str:
@@ -288,3 +287,16 @@ class MD5HashModel(Model):
             return self.classify_connected_letters(img)
         score = 0.0 if char else float("inf")
         return score, char
+
+
+def draw_text_boxes(
+    img: MatLike,
+    text_boxes: List[Tuple[str, Tuple[int, int, int, int]]],
+    font: int = 0,
+    size: float = 0.4,
+    offset: int = -5,
+):
+    for txt, rect in text_boxes:
+        x, y, _, _ = rect
+        cv2.rectangle(img, rect, (0, 255, 0))
+        cv2.putText(img, txt, (x, y + offset), font, size, (0, 255, 0))

@@ -1,5 +1,6 @@
 import argparse
 import json
+from typing import List
 from typing import Optional
 
 import cv2
@@ -29,19 +30,39 @@ def label(file_path: str):
     img_color = cv2.cvtColor(img, cv2.COLOR_GRAY2BGR)
     cnts, _ = cv2.findContours(img, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
     cnts = list(cnts)
+    cnts.sort(key=lambda x: cv2.boundingRect(x)[0])
 
     labels: list[Optional[str]]
     try:
         with open(label_file_path) as fp:
             labels = json.load(fp)
     except FileNotFoundError:
-        labels = [None] * len(cnts)
+        labels = []
 
-    cnts.sort(key=lambda x: cv2.boundingRect(x)[0])
+    # initialize labels with None
+    while len(labels) < len(cnts):
+        labels.append(None)
+
+    # generete humaminze index list, which reads left to right, top to bottom
+    humanized_index: List[int] = []
+    bounding_boxes = [(cv2.boundingRect(c), i) for i, c in enumerate(cnts)]
+    bounding_boxes = sorted(bounding_boxes, key=lambda b: (b[0][1], b[0][0]))
+    while bounding_boxes:
+        current_line = [
+            b
+            for b in bounding_boxes
+            if b[0][1] < bounding_boxes[0][0][1] + bounding_boxes[0][0][3]
+        ]
+        current_line.sort(key=lambda i: i[0][0])
+        for b, i in current_line:
+            humanized_index.append(i)
+            bounding_boxes.remove((b, i))
+
     index = 0
     while True:
         index = index % len(cnts)
-        x, y, w, h = cv2.boundingRect(cnts[index])
+        hindex = humanized_index[index]
+        x, y, w, h = cv2.boundingRect(cnts[hindex])
 
         display = img_color.copy()
 
@@ -63,7 +84,7 @@ def label(file_path: str):
 
         # delete
         if key == 3014656:
-            labels[index] = None
+            labels[hindex] = None
             continue
 
         # right arrow
@@ -81,7 +102,7 @@ def label(file_path: str):
         # if valid character
         # assign to label
         try:
-            labels[index] = chr(key)
+            labels[hindex] = chr(key)
             index += 1
         except ValueError:
             pass

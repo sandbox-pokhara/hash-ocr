@@ -146,8 +146,17 @@ class CV2HashModel(Model):
         hasher: cv2.img_hash.ImgHashBase,
         model_path: str | Path = DEFAULT_MODEL_PATH,
         label_path: str | Path = DEFAULT_LABEL_PATH,
+        score_threshold: float = 80.0,
+        max_letter_gap: int = 4,
+        max_word_gap: int = 10,
     ):
-        super().__init__(model_path, label_path)
+        super().__init__(
+            model_path,
+            label_path,
+            score_threshold,
+            max_letter_gap,
+            max_word_gap,
+        )
         self.hasher = hasher
         self.hashes = self.get_model_hashes()
 
@@ -175,11 +184,17 @@ class AverageHashModel(CV2HashModel):
         self,
         model_path: str | Path = DEFAULT_MODEL_PATH,
         label_path: str | Path = DEFAULT_LABEL_PATH,
+        score_threshold: float = 80.0,
+        max_letter_gap: int = 4,
+        max_word_gap: int = 10,
     ):
         super().__init__(
             cv2.img_hash.AverageHash.create(),
             model_path,
             label_path,
+            score_threshold,
+            max_letter_gap,
+            max_word_gap,
         )
 
 
@@ -189,9 +204,17 @@ class BlockMeanHashModel(CV2HashModel):
         self,
         model_path: str | Path = DEFAULT_MODEL_PATH,
         label_path: str | Path = DEFAULT_LABEL_PATH,
+        score_threshold: float = 80.0,
+        max_letter_gap: int = 4,
+        max_word_gap: int = 10,
     ):
         super().__init__(
-            cv2.img_hash.BlockMeanHash.create(), model_path, label_path
+            cv2.img_hash.BlockMeanHash.create(),
+            model_path,
+            label_path,
+            score_threshold,
+            max_letter_gap,
+            max_word_gap,
         )
 
 
@@ -202,13 +225,21 @@ class MD5HashModel(Model):
         model_path: str | Path = DEFAULT_MODEL_PATH,
         label_path: str | Path = DEFAULT_LABEL_PATH,
         connected_chars: bool = False,
+        max_letter_gap: int = 4,
+        max_word_gap: int = 10,
     ):
         """
         :param connected_chars: set this to True if the characters of
         the font can touch each other, but this will affect the performance
         of the OCR
         """
-        super().__init__(model_path, label_path)
+        super().__init__(
+            model_path,
+            label_path,
+            0.0,
+            max_letter_gap,
+            max_word_gap,
+        )
         self.chars = self.get_model_chars()
         self.hash_map = self.create_hash_map()
         # max/min width of characters of the model

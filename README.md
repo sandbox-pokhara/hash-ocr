@@ -45,7 +45,7 @@ print(model.get_text(threshed))
 # efficiturvenenatis magna ln non eros tincidunt ullamcorper sem et rhoncus augue
 # Duis a dolor in ex efficitur blanditvel at eros
 
-draw_text_boxes(img, model.get_text_boxes(threshed))
+draw_text_boxes(img, model.get_line_boxes(threshed))
 
 cv2.imshow("Hash OCR", img)
 cv2.waitKey()
